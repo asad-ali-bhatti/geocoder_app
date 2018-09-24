@@ -1,5 +1,6 @@
 require 'socket'
 require 'pry'
+require 'json'
 
 module Server
   extend self
@@ -9,11 +10,15 @@ module Server
     while session = tcp_server.accept
       request = session.gets
       print request
-      status, headers, body = rack_app.call({})
+
+      # Mimicking  actual rails like RACK module
+      status, headers, body = rack_app(request)
+
       session.print "HTTP/1.1 #{status}\r\n"
       headers.each do |key, value|
         session.print "#{key}: #{value}\r\n"
       end
+
       session.print "\r\n"
       body.each do |part|
         session.print part
@@ -27,8 +32,18 @@ module Server
   end
 
   def rack_app(request)
-    Proc.new do |request|
-      ['200', {'Content-Type' => 'text/html'}, ["Hello world! The time is #{Time.now}"]]
+    request_method, uri = request.split ' '
+
+    response = {}
+
+    if uri.include? '/geocode'  and request_method == 'GET'
+      response[:body] = {asad: 'asad'}.to_json
+      response[:code] = '200'
+    else
+      response[:code] = '404'
+      response[:body] = 'OooPSsss! Page Not Found!'
     end
+
+    [response[:code], {'Content-Type' => 'application/json'}, [response[:body]]]
   end
 end
