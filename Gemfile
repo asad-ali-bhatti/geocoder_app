@@ -5,5 +5,6 @@ gem 'pry'
 gem 'rspec'
 
 #Utilities
+gem 'require_all'
 
 
