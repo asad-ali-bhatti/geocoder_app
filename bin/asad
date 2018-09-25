@@ -1,0 +1,4 @@
+#!/usr/bin/ruby
+require './lib/geo_coder'
+Server.run
+$stdout.print 'asad'
