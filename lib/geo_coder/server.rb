@@ -9,21 +9,9 @@ module Server
   def run
     while session = tcp_server.accept
       request = session.gets
-      print request
-
       # Mimicking  actual rails like RACK module
-      status, headers, body = rack_app(request)
-
-      session.print "HTTP/1.1 #{status}\r\n"
-      headers.each do |key, value|
-        session.print "#{key}: #{value}\r\n"
-      end
-
-      session.print "\r\n"
-      body.each do |part|
-        session.print part
-      end
-      session.close
+      response = rack_app request
+      print_response session, response
     end
   end
 
@@ -32,18 +20,44 @@ module Server
   end
 
   def rack_app(request)
-    request_method, uri = request.split ' '
+    request_method, uri = request.split ' (?<=\?).*'
+    @params = HashWithIndifferentAccess.new
 
-    response = {}
+    if params_str = uri[/(?<=\?).*/]
+      params_str.split('&').each do |vars|
+        key, value = var.split('=')
+        @params[key] =  value
+      end
+    end
 
+    @request_uri = uri[/.*(?=\?)/]
+
+    response = { code: '', headers: {'Content-Type': 'application/json'}, body: [] }
+
+    #Controller and Action discovery
     if uri.include? '/geocode'  and request_method == 'GET'
-      response[:body] = {asad: 'asad'}.to_json
+      response[:body] << {asad: 'asad'}.to_json
       response[:code] = '200'
     else
       response[:code] = '404'
-      response[:body] = 'OooPSsss! Page Not Found!'
+
+      response[:body] << 'OooPSsss! Page Not Found!'
     end
 
-    [response[:code], {'Content-Type' => 'application/json'}, [response[:body]]]
+    response
+  end
+
+  def print_response(session, response)
+    session.print "HTTP/1.1 #{response[:status]}\r\n"
+    response[:headers].each do |key, value|
+      session.print "#{key}: #{value}\r\n"
+    end
+
+    session.print "\r\n"
+
+    response[:body].each do |part|
+      session.print part
+    end
+    session.close
   end
 end
